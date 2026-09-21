@@ -110,6 +110,7 @@ void BrushBuildFaces(Brush *brush) {
 			center = Vector3Add(center, brush->vertices[face->vertices[j]]);
 		}
 		center = Vector3Scale(center, 1.0f / face->num_vertices);
+		face->center = center;
 
 		Vector3 r = (Vector3) { 0, 1, 0 };
 		if(fabsf(plane->normal.x) < 0.01f && fabsf(plane->normal.z) < 0.01f) r = WORLD_UP;
@@ -156,21 +157,8 @@ void BrushBuildMesh(Brush *brush) {
 	Mesh *mesh = &brush->mesh;
 	*mesh = (Mesh) {0};
 
-	u16 tri_count = 0;
-	for(u8 i = 0; i < brush->num_faces; i++) tri_count += brush->faces[i].num_tris;
-
-	Tri tris[tri_count];
-	u8 cursor = 0;
-	for(u8 i = 0; i < brush->num_faces; i++) {
-		Brush_Face *face = &brush->faces[i];
-
-		for(u8 j = 0; j < face->num_tris; j++) {
-			tris[cursor++] = face->tris[j];		
-		}
-	}
-
-	mesh->triangleCount = tri_count;
-	mesh->vertexCount = tri_count * 3;
+	for(u8 i = 0; i < brush->num_faces; i++) mesh->triangleCount += brush->faces[i].num_tris;
+	mesh->vertexCount = mesh->triangleCount * 3;
 
 	mesh->vertices 		= (float*)MemAlloc(sizeof(float) * mesh->vertexCount * 3);
 	mesh->normals  		= (float*)MemAlloc(sizeof(float) * mesh->vertexCount * 3);
@@ -224,18 +212,22 @@ void BrushDraw(Brush *brush, u8 flags) {
 	if(flags & F_BRUSH_DRAW_AABB)
 		DrawBoundingBox(brush->bounds, MAGENTA);
 
-	if(flags & F_BRUSH_DRAW_VERTICES)
-		BrushDrawVertices(brush);
-
 	if(flags & F_BRUSH_DRAW_IS_SELECTED) {
 		for(u8 i = 0; i < brush->num_faces; i++) {
 			Brush_Face *face = &brush->faces[i];
 
 			for(u8 j = 0; j < face->num_tris; j++) {
 				Tri *tri = &face->tris[j];
-				DrawTriangle3D(tri->vertices[0], tri->vertices[1], tri->vertices[2], ColorAlpha(YELLOW, 0.5f));
+				DrawTriangle3D(tri->vertices[0], tri->vertices[1], tri->vertices[2], ColorAlpha(YELLOW, 0.1f));
+
+				if(flags & F_BRUSH_DRAW_FACES) {
+					DrawMesh(basic_sphere, mat_vert_sphere[0], MatrixTranslate(face->center.x, face->center.y, face->center.z));
+				}
 			}
 		}
+
+		if(flags & F_BRUSH_DRAW_VERTICES)
+			BrushDrawVertices(brush);
 	}
 }
 
@@ -245,3 +237,4 @@ void BrushDrawVertices(Brush *brush) {
 		DrawMesh(basic_sphere, mat_vert_sphere[0], MatrixTranslate(v.x, v.y, v.z));
 	}
 }
+

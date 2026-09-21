@@ -45,6 +45,7 @@ void App::Init() {
 
 void App::Close() {
 	running = false;
+	if(pMap) MapClose(pMap);
 	CloseWindow();
 }
 

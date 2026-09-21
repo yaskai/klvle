@@ -71,7 +71,11 @@ void MapDraw(Map *map, Camera3D camera, float alpha) {
 
 	for(u32 i = 0; i < map->num_brushes; i++) {
 		Brush *brush = &map->brushes[i];
-		BrushDraw(brush, (map->selected_brush == i) ? F_BRUSH_DRAW_IS_SELECTED : 0);
+
+		u8 draw_flags = 0;
+		if(map->selected_brush == i) draw_flags |= F_BRUSH_DRAW_IS_SELECTED;
+
+		BrushDraw(brush, draw_flags);
 	}
 
 	EndMode3D();

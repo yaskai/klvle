@@ -14,6 +14,8 @@ typedef struct {
 	Tri tris[8];
 	u8 num_tris;
 
+	Vector3 center;
+
 	u8 plane;
 
 	u8 num_vertices;	
