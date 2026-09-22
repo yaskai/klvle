@@ -20,6 +20,7 @@ u8 IntersectSegmentPlane(Vector3 a, Vector3 b, Plane plane, float *t, Vector3 *p
 	return 0;
 }
 
+// Compute if three planes intersect where
 bool ThreePlaneIntersect(Plane a, Plane b, Plane c, Vector3 *v) {
 	float denom = Vector3DotProduct(a.normal, Vector3CrossProduct(b.normal, c.normal));
 	if(fabsf(denom) <= EPSILON) return 0;

@@ -79,7 +79,7 @@ void DoButtons_File(App *app) {
 
 void App::Bar() {
 	for(u8 i = 0; i < num_titles; i++) {
-		if(ui_Button( (Rectangle) { 128 * (float)i, 0, 128, 32} , titles[i])) {
+		if(ui_Button( (Rectangle) { 128 * (float)i, 0, 128, 32 } , titles[i])) {
 			active_title = (active_title == i) ? -1 : i; 
 		}
 	}

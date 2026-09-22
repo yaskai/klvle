@@ -11,7 +11,7 @@ typedef struct {
 } Brush_Edge;
 
 typedef struct {
-	Tri tris[8];
+	Tri tris[2];
 	u8 num_tris;
 
 	Vector3 center;

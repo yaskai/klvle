@@ -100,32 +100,32 @@ void BrushBuildFaces(Brush *brush) {
 		}
 	}
 
-	// Sort each faces vertices by angle in counter-clockwise winding order
 	for(u8 i = 0; i < brush->num_faces; i++) {
 		Brush_Face *face = &brush->faces[i];
 		Plane *plane = &brush->planes[i];
 
-		Vector3 center = Vector3Zero();
+		face->center = Vector3Zero();
 		for(u8 j = 0; j < face->num_vertices; j++) {
-			center = Vector3Add(center, brush->vertices[face->vertices[j]]);
+			face->center = Vector3Add(face->center, brush->vertices[face->vertices[j]]);
 		}
-		center = Vector3Scale(center, 1.0f / face->num_vertices);
-		face->center = center;
+		face->center = Vector3Scale(face->center, 1.0f / face->num_vertices);
 
-		Vector3 r = (Vector3) { 0, 1, 0 };
-		if(fabsf(plane->normal.x) < 0.01f && fabsf(plane->normal.z) < 0.01f) r = WORLD_UP;
-
+		// Reference vector
+		Vector3 r = (fabsf(plane->normal.x) < 0.01f && fabsf(plane->normal.z) < 0.01f) ? WORLD_UP : (Vector3) { 0, 1, 0 };
+		// U & V vectors for texture mapping (derived from reference)
 		Vector3 u = Vector3Normalize(Vector3CrossProduct(plane->normal, r)); 
 		Vector3 v = Vector3CrossProduct(plane->normal, u);
 
+		// Measure vertex angles relative to center of face
 		float angles[face->num_vertices];
 		for(u8 j = 0; j < face->num_vertices; j++) {
 			Vector3 vertex = brush->vertices[face->vertices[j]];
 
-			Vector3 d = Vector3Subtract(vertex, center); 
+			Vector3 d = Vector3Subtract(vertex, face->center); 
 			angles[j] = atan2f(Vector3DotProduct(d, v), Vector3DotProduct(d, u));
 		}
 
+		// Sort each faces vertices by angle in counter-clockwise winding order
 		for(u8 a = 0; a < face->num_vertices; a++) {
 			for(u8 b = a + 1; b < face->num_vertices; b++) {
 				if(angles[a] > angles[b]) {
@@ -140,6 +140,7 @@ void BrushBuildFaces(Brush *brush) {
 			}
 		}
 
+		// Populate face triangles
 		for(u8 j = 1; j < face->num_vertices - 1; j++) {
 			Tri tri = (Tri) {0};
 			
