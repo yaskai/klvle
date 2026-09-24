@@ -38,6 +38,15 @@ typedef struct {
 	u8 num_faces;
 	Brush_Face *faces;
 
+	u8 num_selected_vertices;
+	i16 selected_vertices[64];
+
+	u8 num_selected_edges;
+	i16 selected_edges[32];
+
+	u8 num_selected_faces;
+	i16 selected_faces[16];
+
 } Brush;
 
 Brush BrushInitCube(Vector3 position, Vector3 size);
@@ -55,3 +64,4 @@ void BrushBuildMesh(Brush *brush);
 void BrushDraw(Brush *brush, u8 flags);
 
 void BrushDrawVertices(Brush *brush);
+

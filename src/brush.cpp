@@ -20,7 +20,7 @@ void LoadBrushGraphics() {
 
 	for(u8 i = 0; i < 2; i++) mat_vert_sphere[i] = LoadMaterialDefault();
 	mat_vert_sphere[0].maps->color = BLUE;
-	mat_vert_sphere[1].maps->color = YELLOW;
+	mat_vert_sphere[1].maps->color = ORANGE;
 
 	tex_default = LoadTexture("resources/tex_default.png");
 }
@@ -71,6 +71,7 @@ void BrushBuildVertices(Brush *brush) {
 					}
 				}
 
+				// Skip adding duplicate vertices
 				if(dup) 
 					continue;
 
@@ -227,14 +228,21 @@ void BrushDraw(Brush *brush, u8 flags) {
 			}
 		}
 
-		if(flags & F_BRUSH_DRAW_VERTICES)
+		if(flags & F_BRUSH_DRAW_VERTICES) {
 			BrushDrawVertices(brush);
+
+			for(u8 j = 0; j < brush->num_selected_vertices; j++) {
+				Vector3 v = brush->vertices[brush->selected_vertices[j]];
+				DrawMesh(basic_sphere, mat_vert_sphere[1], MatrixTranslate(v.x, v.y, v.z));
+			}
+		}
 	}
 }
 
 void BrushDrawVertices(Brush *brush) {
 	for(u8 i = 0; i < brush->num_vertices; i++) {
 		Vector3 v = brush->vertices[i];
+
 		DrawMesh(basic_sphere, mat_vert_sphere[0], MatrixTranslate(v.x, v.y, v.z));
 	}
 }

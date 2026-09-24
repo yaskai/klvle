@@ -14,6 +14,8 @@ Map MapInitNew() {
 	map.cap_brushes = 128;
 	map.brushes = (Brush*)calloc(map.cap_brushes, sizeof(Brush));
 
+	map.selected_brush = -1;
+
 	return map;
 }
 
@@ -40,26 +42,26 @@ void MapUpdate(Map *map, float dt) {
 	}
 
 	if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT))	{
-		bool hit_any = false;
-		float closest_dist = FLT_MAX;
-		u32 closest_brush = 0;
+		if(map->selected_brush == -1) {
+			SelectBrush(map);
+		} else {
+			switch(map->selection_tool) {
+				case SEL_VERTICES:
+					SelectVertex(map, map->selected_brush);
+					break;
+					
+				case SEL_EDGES:
+					SelectEdge(map, map->selected_brush);
+					break;
 
-		for(u32 i = 0; i < map->num_brushes; i++) {
-			Brush *brush = &map->brushes[i];
-
-			RayCollision coll = GetRayCollisionBox(cursor_ray, brush->bounds);
-
-			if(!coll.hit) continue;
-			hit_any = true;
-
-			if(coll.distance > closest_dist) continue;
-
-			closest_dist = coll.distance; 
-			closest_brush = i;
+				case SEL_FACES:
+					SelectFace(map, map->selected_brush);
+					break;
+			}
 		}
-
-		map->selected_brush = (hit_any) ? closest_brush : -1;
 	}
+
+	if(IsKeyPressed(KEY_ESCAPE)) map->selected_brush = -1;
 }
 
 void MapDraw(Map *map, Camera3D camera, float alpha) {
@@ -73,11 +75,80 @@ void MapDraw(Map *map, Camera3D camera, float alpha) {
 		Brush *brush = &map->brushes[i];
 
 		u8 draw_flags = 0;
-		if(map->selected_brush == i) draw_flags |= F_BRUSH_DRAW_IS_SELECTED;
 
+		if(map->selected_brush == i) {
+			draw_flags |= F_BRUSH_DRAW_IS_SELECTED;
+			
+			switch(map->selection_tool) {
+				case SEL_VERTICES: 
+					draw_flags |= F_BRUSH_DRAW_VERTICES;
+					break;
+
+				case SEL_EDGES:
+					draw_flags |= F_BRUSH_DRAW_EDGES;
+					break;
+
+				case SEL_FACES:
+					draw_flags |= F_BRUSH_DRAW_FACES;
+					break;
+			}
+		}
+		
 		BrushDraw(brush, draw_flags);
 	}
 
 	EndMode3D();
+}
+
+void SelectBrush(Map *map) {
+	bool hit_any = false;
+	float closest_dist = FLT_MAX;
+	u32 closest_brush = 0;
+
+	for(u32 i = 0; i < map->num_brushes; i++) {
+		Brush *brush = &map->brushes[i];
+
+		RayCollision coll = GetRayCollisionBox(cursor_ray, brush->bounds);
+
+		if(!coll.hit) continue;
+		hit_any = true;
+
+		if(coll.distance > closest_dist) continue;
+
+		closest_dist = coll.distance; 
+		closest_brush = i;
+	}
+
+	if(hit_any)
+		map->selected_brush = closest_brush;
+}
+
+void SelectVertex(Map *map, u32 brush_id) {
+	Brush *brush = &map->brushes[brush_id];
+
+	RayCollision closest_coll = (RayCollision) {0};
+	closest_coll.distance = FLT_MAX;
+
+	// * NOTE:
+	// Remove later!
+	brush->num_selected_vertices = 0;
+
+	for(u8 i = 0; i < brush->num_vertices; i++) {
+		RayCollision coll = GetRayCollisionSphere(cursor_ray, brush->vertices[i], 0.5f);
+		
+		if(!coll.hit)
+			continue;
+
+		if(coll.distance > closest_coll.distance)
+			continue;
+
+		brush->selected_vertices[brush->num_selected_vertices++] = i;	
+	}
+}
+
+void SelectEdge(Map *map, u32 brush_id) {
+}
+
+void SelectFace(Map *map, u32 brush_id) {
 }
 

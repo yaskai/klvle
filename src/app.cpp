@@ -22,6 +22,7 @@ void App::Init() {
 
 	InitWindow(ww, wh, "klvle");
 	SetWindowState(FLAG_VSYNC_HINT);
+	SetExitKey(KEY_NULL);
 
 	rlSetClipPlanes(CLIP_NEAR, CLIP_FAR);
 	//rlDisableBackfaceCulling();
@@ -31,7 +32,7 @@ void App::Init() {
 	ui_Init(font);
 
 	camera = (Camera3D) {
-		.position = (Vector3) { 0, 0, 0 },
+		.position = (Vector3) { -10, 10, 10 },
 		.target = (Vector3) { 1, 0, 0 },
 		.up = (Vector3) { 0, 0, 1 },
 		.fovy = 90.0f,
