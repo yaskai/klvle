@@ -61,7 +61,25 @@ void MapUpdate(Map *map, float dt) {
 		}
 	}
 
-	if(IsKeyPressed(KEY_ESCAPE)) map->selected_brush = -1;
+	if(IsKeyPressed(KEY_ESCAPE)) { 
+		if(map->selected_brush > -1) {
+			Brush *brush = &map->brushes[map->selected_brush];
+
+			brush->num_selected_vertices = 0;
+			brush->num_selected_edges = 0;
+			brush->num_selected_faces = 0;
+		}
+
+		map->selected_brush = -1;
+	}
+	
+	if(map->selected_brush > -1 && map->selected_brush < map->num_brushes) {
+		Brush *brush = &map->brushes[map->selected_brush];
+
+		if(map->selection_tool == SEL_VERTICES && brush->num_selected_vertices) {
+			BrushMoveVertex(brush);
+		}
+	}
 }
 
 void MapDraw(Map *map, Camera3D camera, float alpha) {
@@ -82,6 +100,7 @@ void MapDraw(Map *map, Camera3D camera, float alpha) {
 			switch(map->selection_tool) {
 				case SEL_VERTICES: 
 					draw_flags |= F_BRUSH_DRAW_VERTICES;
+					draw_flags |= F_BRUSH_DRAW_FACES;
 					break;
 
 				case SEL_EDGES:
@@ -95,6 +114,7 @@ void MapDraw(Map *map, Camera3D camera, float alpha) {
 		}
 		
 		BrushDraw(brush, draw_flags);
+		BrushDrawEdges(brush);
 	}
 
 	EndMode3D();
@@ -132,17 +152,40 @@ void SelectVertex(Map *map, u32 brush_id) {
 	// * NOTE:
 	// Remove later!
 	brush->num_selected_vertices = 0;
+	brush->num_selected_faces = 0;
 
-	for(u8 i = 0; i < brush->num_vertices; i++) {
-		RayCollision coll = GetRayCollisionSphere(cursor_ray, brush->vertices[i], 0.5f);
+	for(u8 i = 0; i < brush->num_faces; i++) {
+		Brush_Face *face = &brush->faces[i];
+
+		bool added_vertex = false;
+		for(u8 j = 0; j < face->num_vertices; j++) {
+			Vector3 v = brush->vertices[face->vertices[j]];
+			RayCollision coll = GetRayCollisionSphere(cursor_ray, v, 0.5f);
+
+			if(!coll.hit) 
+				continue;
+
+			if(coll.distance > closest_coll.distance)
+				continue;
+
+			closest_coll = coll;
+
+			bool dup = false; u8 k = 0;
+			while(!dup && k < brush->num_selected_vertices) {
+				if(brush->selected_vertices[k] == face->vertices[j]) dup = true;
+				++k;
+			}
+
+			if(!dup)
+				brush->selected_vertices[brush->num_selected_vertices++] = face->vertices[j];	
+
+			added_vertex = true;
+		}
 		
-		if(!coll.hit)
+		if(!added_vertex)
 			continue;
 
-		if(coll.distance > closest_coll.distance)
-			continue;
-
-		brush->selected_vertices[brush->num_selected_vertices++] = i;	
+		brush->selected_faces[brush->num_selected_faces++] = i;	
 	}
 }
 

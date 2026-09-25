@@ -2,6 +2,8 @@
 #include "app.h"
 
 int main() {
+	SetTraceLogLevel(LOG_ERROR);
+
 	App app; 
 	App* pApp = &app;
 	pApp->Init();

@@ -7,11 +7,13 @@
 void LoadBrushGraphics();
 
 typedef struct {
-
-} Brush_Edge;
+	u8 vertices[3];
+	
+} TriRef;
 
 typedef struct {
 	Tri tris[2];
+	TriRef tri_refs[2];
 	u8 num_tris;
 
 	Vector3 center;
@@ -22,6 +24,11 @@ typedef struct {
 	u8 vertices[8];
 
 } Brush_Face;
+
+typedef struct {
+	u8 p[2];
+
+} Brush_Edge;
 
 typedef struct {
 	Model model;	
@@ -38,6 +45,9 @@ typedef struct {
 	u8 num_faces;
 	Brush_Face *faces;
 
+	u8 num_edges;
+	Brush_Edge *edges;
+
 	u8 num_selected_vertices;
 	i16 selected_vertices[64];
 
@@ -53,6 +63,7 @@ Brush BrushInitCube(Vector3 position, Vector3 size);
 
 void BrushBuildVertices(Brush *brush);
 void BrushBuildFaces(Brush *brush);
+void BrushBuildEdges(Brush *brush);
 void BrushBuildMesh(Brush *brush);
 
 #define F_BRUSH_DRAW_IS_SELECTED	0x01
@@ -62,6 +73,8 @@ void BrushBuildMesh(Brush *brush);
 #define F_BRUSH_DRAW_FACES			0x10
 #define F_BRUSH_DRAW_AABB			0x20
 void BrushDraw(Brush *brush, u8 flags);
-
 void BrushDrawVertices(Brush *brush);
+void BrushDrawEdges(Brush *brush);
+
+void BrushMoveVertex(Brush *brush);
 

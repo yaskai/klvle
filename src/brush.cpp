@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <cstring>
 #include <vector>
 #include <cstdlib>
@@ -48,6 +49,7 @@ Brush BrushInitCube(Vector3 position, Vector3 size) {
 
 	BrushBuildVertices(&brush);
 	BrushBuildFaces(&brush);
+	BrushBuildEdges(&brush);
 	BrushBuildMesh(&brush);
 
 	return brush;
@@ -144,15 +146,63 @@ void BrushBuildFaces(Brush *brush) {
 		// Populate face triangles
 		for(u8 j = 1; j < face->num_vertices - 1; j++) {
 			Tri tri = (Tri) {0};
+			TriRef tri_ref = (TriRef) {0};
 			
+			u8 vert_ids[3] = { face->vertices[0], face->vertices[j], face->vertices[j+1] };
 			Vector3 verts[3] = { brush->vertices[face->vertices[0]], brush->vertices[face->vertices[j]], brush->vertices[face->vertices[j+1]] };
 			memcpy(tri.vertices, verts, sizeof(Vector3) * 3);
+			memcpy(tri_ref.vertices, vert_ids, sizeof(u8) * 3);
 
 			tri.normal = brush->planes[face->plane].normal;
 
-			face->tris[face->num_tris++] = tri;
+			face->tris[face->num_tris] = tri;
+			face->tri_refs[face->num_tris] = tri_ref;
+
+			face->num_tris++;
 		}
 	}
+}
+
+void BrushBuildEdges(Brush *brush) {
+	std::vector<Brush_Edge> edges; 
+
+	for(u8 i = 0; i < brush->num_faces; i++) {
+		Brush_Face *face = &brush->faces[i];
+		
+		for(u8 j = 0; j < face->num_vertices; j++) {
+			for(u8 k = j+1; k < face->num_vertices; k++) {
+				Vector3 p0 = brush->vertices[face->vertices[j]];
+				Vector3 p1 = brush->vertices[face->vertices[k]];
+
+				Vector3 dir_p = Vector3Normalize(Vector3Subtract(p1, p0));
+				Vector3 dir_c = Vector3Normalize(Vector3Subtract(p1, face->center));
+
+				if(Vector3DotProduct(dir_p, dir_c) >= 1.0f - 1e-4f)
+					continue;
+
+				bool dup = false;
+				for(u8 n = 0; n < edges.size(); n++) {
+					Brush_Edge *other = &edges[n];
+					
+					if( (other->p[0] == face->vertices[j] && other->p[1] == face->vertices[j]) ||
+						(other->p[0] == face->vertices[k] && other->p[1] == face->vertices[j]) 
+						) dup = true;
+				}
+
+				if(dup)
+					continue;
+
+				Brush_Edge edge = (Brush_Edge) {0};
+				edge.p[0] = face->vertices[j];
+				edge.p[1] = face->vertices[k];
+				edges.push_back(edge);
+			}
+		}
+	}
+
+	brush->num_edges = edges.size();
+	brush->edges = (Brush_Edge*)malloc(sizeof(Brush_Edge) * brush->num_edges);
+	memcpy(brush->edges, edges.data(), sizeof(Brush_Edge) * brush->num_edges);
 }
 
 void BrushBuildMesh(Brush *brush) {
@@ -206,7 +256,16 @@ void BrushBuildMesh(Brush *brush) {
 }
 
 void BrushDraw(Brush *brush, u8 flags) {
-	DrawModel(brush->model, Vector3Zero(), 1.0f, GRAY);
+	//DrawModel(brush->model, Vector3Zero(), 1.0f, GRAY);
+
+	for(u8 i = 0; i < brush->num_faces; i++) {
+		Brush_Face *face = &brush->faces[i];
+
+		for(u8 j = 0; j < 2; j++) {
+			Tri *tri = &face->tris[j];
+			DrawTriangle3D(tri->vertices[0], tri->vertices[1], tri->vertices[2], GRAY);
+		}
+	}
 
 	if(flags & F_BRUSH_DRAW_WIRES)
 		DrawModelWires(brush->model, Vector3Zero(), 1.0f, MAGENTA);
@@ -215,15 +274,30 @@ void BrushDraw(Brush *brush, u8 flags) {
 		DrawBoundingBox(brush->bounds, MAGENTA);
 
 	if(flags & F_BRUSH_DRAW_IS_SELECTED) {
+		/*
 		for(u8 i = 0; i < brush->num_faces; i++) {
 			Brush_Face *face = &brush->faces[i];
 
 			for(u8 j = 0; j < face->num_tris; j++) {
 				Tri *tri = &face->tris[j];
-				DrawTriangle3D(tri->vertices[0], tri->vertices[1], tri->vertices[2], ColorAlpha(YELLOW, 0.1f));
+				DrawTriangle3D(tri->vertices[0], tri->vertices[1], tri->vertices[2], ColorAlpha(ORANGE, 0.1f));
 
 				if(flags & F_BRUSH_DRAW_FACES) {
 					DrawMesh(basic_sphere, mat_vert_sphere[0], MatrixTranslate(face->center.x, face->center.y, face->center.z));
+				}
+			}
+		}
+		*/
+
+		for(u8 i = 0; i < brush->num_selected_faces; i++) {
+			Brush_Face *face = &brush->faces[brush->selected_faces[i]];
+
+			for(u8 j = 0; j < face->num_tris; j++) {
+				Tri *tri = &face->tris[j];
+				DrawTriangle3D(tri->vertices[0], tri->vertices[1], tri->vertices[2], ColorAlpha(ORANGE, 0.1f));
+
+				if(flags & F_BRUSH_DRAW_FACES) {
+					DrawMesh(basic_sphere, mat_vert_sphere[1], MatrixTranslate(face->center.x, face->center.y, face->center.z));
 				}
 			}
 		}
@@ -245,5 +319,93 @@ void BrushDrawVertices(Brush *brush) {
 
 		DrawMesh(basic_sphere, mat_vert_sphere[0], MatrixTranslate(v.x, v.y, v.z));
 	}
+}
+
+void BrushDrawEdges(Brush *brush) {
+	for(u8 i = 0; i < brush->num_edges; i++) {
+		Brush_Edge *edge = &brush->edges[i];
+
+		Vector3 p0 = brush->vertices[edge->p[0]];
+		Vector3 p1 = brush->vertices[edge->p[1]];
+
+		DrawLine3D(p0, p1, MAGENTA);
+	}
+}
+
+void BrushMoveVertex(Brush *brush) {
+	Vector3 move = Vector3Zero();
+
+	if(IsKeyPressed(KEY_PAGE_UP)) 
+		move = Vector3Add(move, WORLD_UP);
+
+	if(IsKeyPressed(KEY_PAGE_DOWN)) 
+		move = Vector3Add(move, WORLD_DOWN);
+
+	if(IsKeyPressed(KEY_UP))
+		move = Vector3Add(move, (Vector3) { 0, 1, 0 } );
+
+	if(IsKeyPressed(KEY_DOWN))
+		move = Vector3Add(move, (Vector3) { 0, -1, 0 } );
+
+	if(IsKeyPressed(KEY_LEFT))
+		move = Vector3Add(move, (Vector3) { -1, 0, 0 } );
+
+	if(IsKeyPressed(KEY_RIGHT))
+		move = Vector3Add(move, (Vector3) { 1, 0, 0 } );
+
+	if(!Vector3LengthSqr(move)) return;
+
+	for(u8 i = 0; i < brush->num_selected_vertices; i++) {
+		u8 vert_id = brush->selected_vertices[i];
+		brush->vertices[vert_id] = Vector3Add(brush->vertices[brush->selected_vertices[i]], move);
+	}
+
+	for(u8 i = 0; i < brush->num_selected_faces; i++) {
+		Brush_Face *face = &brush->faces[brush->selected_faces[i]];
+
+		for(u8 j = 0; j < face->num_vertices; j++) {
+			for(u8 k = 0; k < 2; k++) {
+				TriRef *tri_ref = &face->tri_refs[k];
+				Tri *tri = &face->tris[k];
+
+				Vector3 verts[3] = { brush->vertices[tri_ref->vertices[0]], brush->vertices[tri_ref->vertices[1]], brush->vertices[tri_ref->vertices[2]] };
+				memcpy(&tri->vertices, verts, sizeof(Vector3) * 3);
+			}
+		}
+	}
+
+	for(u8 i = 0; i < brush->num_faces; i++) {
+		Brush_Face *face = &brush->faces[i];
+		Plane plane = brush->planes[face->plane];
+
+		for(u8 j = 0; j < face->num_vertices; j++) {
+			u8 vert_id = face->vertices[j];
+
+			if(fabsf(PlaneDistance(brush->vertices[vert_id], plane)) > 0.01f) {
+			} 
+		}
+	}
+
+	/*
+	Mesh *mesh = &brush->mesh;
+
+	u16 vert_id = 0;
+	for(u8 i = 0; i < brush->num_faces; i++) {
+		Brush_Face *face = &brush->faces[i];
+		Plane *plane = &brush->planes[face->plane];
+
+		for(u8 j = 0; j < face->num_tris; j++) {
+			Tri tri = face->tris[j];
+
+			for(u8 k = 0; k < 3; k++) {
+				memcpy(&mesh->vertices[vert_id*3], &tri.vertices[k], sizeof(Vector3));
+				memcpy(&mesh->normals[vert_id*3], &tri.normal, sizeof(Vector3));
+				vert_id++;
+			}
+		}
+	}
+		
+	UploadMesh(&brush->mesh, true);
+	*/
 }
 
