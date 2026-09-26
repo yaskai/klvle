@@ -25,7 +25,6 @@ void App::Init() {
 	SetExitKey(KEY_NULL);
 
 	rlSetClipPlanes(CLIP_NEAR, CLIP_FAR);
-	//rlDisableBackfaceCulling();
 	rlSetLineWidth(4.0f);
 
 	font = LoadFont("resources/fonts/zed_mono.ttf");
