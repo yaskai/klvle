@@ -382,6 +382,7 @@ void BrushMoveVertex(Brush *brush) {
 			u8 vert_id = face->vertices[j];
 
 			if(fabsf(PlaneDistance(brush->vertices[vert_id], plane)) > 0.01f) {
+
 			} 
 		}
 	}
