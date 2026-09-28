@@ -158,6 +158,7 @@ void BrushBuildFaces(Brush *brush) {
 			face->tris[face->num_tris] = tri;
 			face->tri_refs[face->num_tris] = tri_ref;
 
+			if(face->num_vertices < 3) continue;
 			face->num_tris++;
 		}
 	}
@@ -368,45 +369,49 @@ void BrushMoveVertex(Brush *brush) {
 				TriRef *tri_ref = &face->tri_refs[k];
 				Tri *tri = &face->tris[k];
 
-				Vector3 verts[3] = { brush->vertices[tri_ref->vertices[0]], brush->vertices[tri_ref->vertices[1]], brush->vertices[tri_ref->vertices[2]] };
+				Vector3 verts[3] = {
+					brush->vertices[tri_ref->vertices[0]],
+					brush->vertices[tri_ref->vertices[1]],
+					brush->vertices[tri_ref->vertices[2]] 
+				};
+
 				memcpy(&tri->vertices, verts, sizeof(Vector3) * 3);
 			}
 		}
 	}
+	
+	std::vector<Plane> planes;
 
+	bool rebuild = false;
 	for(u8 i = 0; i < brush->num_faces; i++) {
 		Brush_Face *face = &brush->faces[i];
 		Plane plane = brush->planes[face->plane];
 
-		for(u8 j = 0; j < face->num_vertices; j++) {
-			u8 vert_id = face->vertices[j];
+		planes.push_back(brush->planes[face->plane]);
 
-			if(fabsf(PlaneDistance(brush->vertices[vert_id], plane)) > 0.01f) {
+		for(u8 j = 0; j < 2; j++) {
+			Vector3 norm = TriNormal(face->tris[j]);
 
-			} 
+			if(Vector3Equals(norm, plane.normal)) 
+				continue;
+
+			planes.push_back(TriToPlane(face->tris[j]));
+			rebuild = true;
 		}
 	}
 
-	/*
-	Mesh *mesh = &brush->mesh;
+	if(rebuild) {
+		brush->planes = (Plane*)realloc(brush->planes, sizeof(Plane) * planes.size());
+		brush->num_planes = planes.size();
+		memcpy(brush->planes, planes.data(), sizeof(Plane) * planes.size());
 
-	u16 vert_id = 0;
-	for(u8 i = 0; i < brush->num_faces; i++) {
-		Brush_Face *face = &brush->faces[i];
-		Plane *plane = &brush->planes[face->plane];
+		free(brush->vertices);
+		free(brush->edges);
+		free(brush->faces);
 
-		for(u8 j = 0; j < face->num_tris; j++) {
-			Tri tri = face->tris[j];
-
-			for(u8 k = 0; k < 3; k++) {
-				memcpy(&mesh->vertices[vert_id*3], &tri.vertices[k], sizeof(Vector3));
-				memcpy(&mesh->normals[vert_id*3], &tri.normal, sizeof(Vector3));
-				vert_id++;
-			}
-		}
+		BrushBuildVertices(brush);
+		BrushBuildFaces(brush);
+		BrushBuildEdges(brush);
 	}
-		
-	UploadMesh(&brush->mesh, true);
-	*/
 }
 

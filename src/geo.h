@@ -29,6 +29,9 @@ typedef struct {
 	
 } Tri;
 
+Vector3 TriNormal(Tri tri);
+Plane TriToPlane(Tri tri);
+
 Vector3 BoxExtents(BoundingBox aabb);
 Vector3 BoxCenter(BoundingBox aabb);
 

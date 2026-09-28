@@ -33,6 +33,23 @@ bool ThreePlaneIntersect(Plane a, Plane b, Plane c, Vector3 *v) {
 	return 1;
 }
 
+// Calculate a triangle's normal from it's three vertices
+Vector3 TriNormal(Tri tri) {
+	Vector3 u = Vector3Subtract(tri.vertices[1], tri.vertices[0]);
+	Vector3 v = Vector3Subtract(tri.vertices[2], tri.vertices[0]);
+	return Vector3Normalize(Vector3CrossProduct(u, v));
+}
+
+// Convert a triangle to a plane
+Plane TriToPlane(Tri tri) {
+	Plane plane = (Plane) {0};
+
+	plane.normal = tri.normal;	
+	plane.distance = Vector3DotProduct(plane.normal, tri.vertices[0]);
+
+	return plane;
+}
+
 // Return a set of six planes from a bounding box
 Plane *BoxToPlanes(BoundingBox aabb) {
 	Plane *planes = (Plane*)malloc(sizeof(Plane) * 6);
